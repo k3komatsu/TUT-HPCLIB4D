@@ -38,6 +38,8 @@ interface ClusterInfo
             return new TUTWInfo();
         else if(envval.startsWith("TUTX"))
             return new TUTXInfo();
+        else if(envval.startsWith("TUTY"))
+            return new TUTYInfo();
         else if(envval.startsWith("KyotoB"))
             return new KyotoBInfo();
         else if(envval.startsWith("LocalPC"))
@@ -123,6 +125,44 @@ class TUTXInfo : ClusterInfo
     {
         import std.socket;
         return Socket.hostName.startsWith("xsnd");
+    }
+  }
+}
+
+
+class TUTYInfo : ClusterInfo
+{
+  override @property
+  {
+    string name() { return "TUTY"; }
+    uint maxNode() { return 15; }
+    uint maxPPN() { return 48; }
+    uint maxMemGB() { return 250; }
+    uint maxArraySize() { return 100; }
+    string defaultQueueName() { return "mRchq"; }
+
+        string jobID()
+    {
+        return environment["PBS_JOBID"];
+    }
+
+    uint arrayID()
+    {
+        return environment["PBS_ARRAY_INDEX"].to!uint;
+    }
+
+    string arrayIDEnvKey() { return "PBS_ARRAY_INDEX"; }
+
+    bool isDevHost()
+    {
+        import std.socket;
+        return Socket.hostName.startsWith("ydev");
+    }
+
+    bool isCompNode()
+    {
+        import std.socket;
+        return Socket.hostName.startsWith("ysnd") || Socket.hostName.startsWith("yind");
     }
   }
 }

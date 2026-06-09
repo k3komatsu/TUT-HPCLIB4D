@@ -5,7 +5,6 @@ import core.runtime;
 import tuthpc.mail;
 import tuthpc.cluster;
 public import tuthpc.tasklist;
-import tuthpc.limiter;
 import tuthpc.variable;
 
 import std.algorithm;
@@ -115,6 +114,7 @@ class JobEnvironment
 {
     bool useArrayJob = true;    /// ArrayJobにするかどうか
     string scriptPath;          /// スクリプトファイルの保存場所, nullならパイプでqsubにジョブを送る
+    bool disableSubmit = false; /// qsubによるジョブ投入を無効にする
     string queueName;           /// nullのとき，自動でclusters[cluster].queueNameに設定される
     string jobName;             /// ジョブの名前
     string dependentJob;        /// 依存しているジョブのID
@@ -181,7 +181,8 @@ class JobEnvironment
             "th:forceCommandLineArgs", &isForcedCommandLineArgs,
             "th:logdir", &logdir,
             "th:scriptLog", &scriptPath,
-            "th:show", &isShowMode
+            "th:show", &isShowMode,
+            "th:disableSubmit", &disableSubmit
         );
 
         if(walltime_int != -1)
@@ -596,13 +597,6 @@ Pid spawnTask(in string[] args, JobEnvironment jenv, size_t taskIndex, string lo
 {
     import std.path;
 
-    if(ClusterInfo.currInstance)
-    {
-        enforce(numOfProcessOfUser() <= jenv.totalProcessNum,
-            "Many processes are spawned.\n Process List:\n%(%s\n%)".format(pgrepByUser()));
-    }
-
-
     string outname = buildPath(logdir, format("stdout_%s.log", taskIndex));
     string errname = buildPath(logdir, format("stderr_%s.log", taskIndex));
 
@@ -956,9 +950,15 @@ PushResult!T pushArrayJobToQueue(T)(string runId, size_t arrayJobSize, JobEnviro
         std.file.write(env.scriptPath, app.data);
 
         qsubcommands ~= env.scriptPath;
-        auto qsub = execute(qsubcommands);
-        dstJobId = qsub.output.until!(a => a != '.').array().to!string;
+
+        if(!env.disableSubmit) {
+            auto qsub = execute(qsubcommands);
+            dstJobId = qsub.output.until!(a => a != '.').array().to!string;
+        } else {
+            writeln("[QSUB] submission commands:\n", qsubcommands.join(" "));
+        }
     }else{
+        enforce(!env.disableSubmit, "Job submission is disabled");
         auto pipes = pipeProcess(qsubcommands, Redirect.stdin | Redirect.stdout);
         scope(exit) wait(pipes.pid);
         scope(failure) kill(pipes.pid);
