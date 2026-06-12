@@ -138,7 +138,7 @@ class TUTYInfo : ClusterInfo
     uint maxNode() { return 15; }
     uint maxPPN() { return 48; }
     uint maxMemGB() { return 250; }
-    uint maxArraySize() { return 100; }
+    uint maxArraySize() { return 10000; }
     string defaultQueueName() { return "mRchq"; }
 
         string jobID()
